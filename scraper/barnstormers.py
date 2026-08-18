@@ -61,7 +61,7 @@ def _compact(text: str) -> str:
 # listed (no generic \d+) so this can't drift onto an unrelated "S-something".
 _MODEL_NUMBERS = ["4", "5", "6", "7", "9", "10", "12", "14", "17", "18", "19", "20", "21"]
 _MODEL_CODE_RE = re.compile(
-    r"\bs[\s-]?(" + "|".join(_MODEL_NUMBERS) + r")\b", re.IGNORECASE
+    r"\bs[\s-]?(" + "|".join(_MODEL_NUMBERS) + r")[a-z]{0,2}\b", re.IGNORECASE
 )
 
 # Only ads whose title matches one of these (case/hyphen/space-insensitive,
