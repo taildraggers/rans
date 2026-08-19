@@ -12,6 +12,15 @@ that look like parts/accessories/services/raffles are dropped. Surviving
 titles are rewritten to a canonical "YEAR RANS MODEL" form when the ad
 states a model year, or just "RANS MODEL" when it doesn't, so every
 listing follows the same format.
+
+taildraggers.com is taildragger-only, so two further exclusions apply:
+- The S-19 Venterra is a dedicated tricycle-gear cross-country design with
+  no taildragger option, so it's dropped from the model list entirely.
+- Several other RANS kits (S-6 Coyote II, S-20 Raven, S-21 Outbound) are
+  factory-buildable as either tailwheel or tricycle gear, so the model
+  name alone doesn't say which a given for-sale aircraft has. Those are
+  kept, but any individual ad whose own text explicitly says tricycle/
+  trike/nosewheel gear is dropped.
 """
 from __future__ import annotations
 
@@ -55,14 +64,33 @@ def _compact(text: str) -> str:
 
 
 # RANS model codes are "S" + a model number, optionally followed by a
-# trailing letter/suffix (e.g. "S-6ES", "S-19"). The prefix and number may
+# trailing letter/suffix (e.g. "S-6ES", "S-7S"). The prefix and number may
 # be separated by a space, a hyphen, or nothing, since _title_from_url()
 # turns the source URL's hyphens into spaces. Only official S-numbers are
 # listed (no generic \d+) so this can't drift onto an unrelated "S-something".
-_MODEL_NUMBERS = ["4", "5", "6", "7", "9", "10", "12", "14", "17", "18", "19", "20", "21"]
+# "19" (Venterra) is deliberately omitted - see module docstring.
+_MODEL_NUMBERS = ["4", "5", "6", "7", "9", "10", "12", "14", "17", "18", "20", "21"]
 _MODEL_CODE_RE = re.compile(
     r"\bs[\s-]?(" + "|".join(_MODEL_NUMBERS) + r")[a-z]{0,2}\b", re.IGNORECASE
 )
+
+# Ads whose title or body text explicitly calls out tricycle/nosewheel gear
+# are dropped, regardless of which model they are - see module docstring.
+_NON_TAILWHEEL_KEYWORDS = (
+    "tricycle gear",
+    "tricycle landing gear",
+    "trike gear",
+    "tri-gear",
+    "tri gear",
+    "nosewheel",
+    "nose wheel",
+    "nose-wheel",
+)
+
+
+def _is_non_tailwheel(text: str) -> bool:
+    lowered = text.lower()
+    return any(keyword in lowered for keyword in _NON_TAILWHEEL_KEYWORDS)
 
 # Only ads whose title matches one of these (case/hyphen/space-insensitive,
 # compared against a fully compacted - no spaces or hyphens - form of the
@@ -90,7 +118,6 @@ _MARKETING_NAME_RULES = [
     (re.compile(r"\bairaile\b", re.IGNORECASE), "S-12"),
     (re.compile(r"\bstinger\s*ii\b", re.IGNORECASE), "S-18"),
     (re.compile(r"\bstinger\b", re.IGNORECASE), "S-17"),
-    (re.compile(r"\bventerra\b", re.IGNORECASE), "S-19"),
     (re.compile(r"\braven\b", re.IGNORECASE), "S-20"),
     (re.compile(r"\boutbound\b", re.IGNORECASE), "S-21"),
 ]
@@ -164,6 +191,9 @@ def _parse_detail_page(url: str, html: str) -> Listing | None:
         return None
 
     text = soup.get_text(" ", strip=True)
+
+    if _is_non_tailwheel(title) or _is_non_tailwheel(text):
+        return None
 
     formatted_title = format_aircraft_title(title, text, _extract_model)
     if not formatted_title:
